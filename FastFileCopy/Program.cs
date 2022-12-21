@@ -5,6 +5,7 @@ namespace FastFileCopy
 {
     internal class Program
     {
+        //dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
 
         enum Operation
         {
