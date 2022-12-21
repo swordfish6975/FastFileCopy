@@ -144,6 +144,7 @@ namespace FastFileCopy
 
                 int matchedCheckSums = 0;
                 int chunkRetries = 0;
+                int bytesRead = 0;
 
                 using (FileStream fsread = new(source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
                 {
@@ -170,6 +171,8 @@ namespace FastFileCopy
                                             if (read == 0)
                                                 break;
 
+                                            bytesRead += read;
+
                                             bwwrite.Write(dataArray, 0, read);
 
                                             //have to write to disk so that we can read and check the results
@@ -194,6 +197,7 @@ namespace FastFileCopy
                                                 fsread.Position = sourcePositon;
                                                 fswrite.Position = sourcePositon;
                                                 fsCheckRead.Position = sourcePositon;
+                                                bytesRead -= read;
                                             }
                                         }
 
@@ -212,7 +216,7 @@ namespace FastFileCopy
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"source:{source} dest:{dest} matchedCheckSums:{matchedCheckSums} chunkRetries:{chunkRetries} in {sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"Source:{source} Dest:{dest} Size:{ReadablizeBytes(bytesRead)} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
@@ -223,6 +227,14 @@ namespace FastFileCopy
             }
 
         }
+
+        private static string ReadablizeBytes(int input)
+        {
+            var s = new string[] { "Bytes", "KB", "MB", "GB", "TB", "PB" };
+            var e = (int)Math.Floor(Math.Log(input) / Math.Log(1024));
+            return $"{input / Math.Pow(1024, e):00} {s[e]}";
+        }
+
     }
 
 }
