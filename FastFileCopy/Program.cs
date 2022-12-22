@@ -77,27 +77,15 @@ namespace FastFileCopy
             if (flag4 == Logging.Yes)
                 sw2.Start();
 
-            if (flag3 == 1)
+
+            Parallel.ForEach(files, new ParallelOptions()
             {
-                files.ToList().ForEach(source =>
-                {
-                    DoTaskWork(DestinationPath, source, flag2, flag4, flag5);
-                });
-
-            }
-            else
+                MaxDegreeOfParallelism = flag3
+            },
+            (Source) =>
             {
-
-                Parallel.ForEach(files, new ParallelOptions()
-                {
-                    MaxDegreeOfParallelism = flag3
-                },
-                (source) =>
-                {
-                    DoTaskWork(DestinationPath, source, flag2, flag4, flag5);
-                });
-
-            }
+                Execute(DestinationPath, Source, flag2, flag4, flag5);
+            });
 
 
             if (flag4 == Logging.Yes)
@@ -107,33 +95,22 @@ namespace FastFileCopy
             }
 
 
-
         }
 
 
-        private static void DoTaskWork(string DestinationPath, string source, Operation flag2, Logging flag4, int flag5)
+        private static void Execute(string Source, string DestinationPath, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
-                var dest = Path.Combine(DestinationPath, Path.GetFileName(source));
+                var dest = Path.Combine(DestinationPath, Path.GetFileName(Source));
 
-                Execute(source, dest, flag2, flag4, flag5);
+                string? path = Path.GetDirectoryName(dest);
 
-            }
-            catch (Exception ex)
-            {
+                if (string.IsNullOrEmpty(path))
+                    throw new Exception($"path == null");
 
-                if (flag4 == Logging.Yes)
-                    Console.WriteLine($"error:  {ex.Message} | {ex.InnerException} | {ex.StackTrace}");
-            }
+                var tempDest = $"{Path.Combine(path, Path.GetFileNameWithoutExtension(dest))}.temp";
 
-        }
-
-
-        private static void Execute(string source, string dest, Operation flag2, Logging flag4, int flag5)
-        {
-            try
-            {
                 Stopwatch sw1 = new();
 
                 if (flag4 == Logging.Yes)
@@ -146,20 +123,21 @@ namespace FastFileCopy
                 int chunkRetries = 0;
                 int bytesRead = 0;
 
-                using (FileStream fsread = new(source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
+                using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
                 {
                     using (BinaryReader bwread = new(fsread))
                     {
-                        using (FileStream fswrite = new(dest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length))
+                        using (FileStream fswrite = new(tempDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length))
                         {
                             using (BinaryWriter bwwrite = new(fswrite))
                             {
-                                using (FileStream fsCheckRead = new(dest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length))
+                                using (FileStream fsCheckRead = new(tempDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length))
                                 {
                                     using (BinaryReader bwCheckread = new(fsCheckRead))
                                     {
                                         var dataArray = new byte[array_length];
                                         var checkArray = new byte[array_length];
+
                                         int abort = 0;
 
                                         for (; ; )
@@ -183,6 +161,7 @@ namespace FastFileCopy
 
                                             if (sourceHash == destHash)
                                             {
+                                                abort = 0;
                                                 matchedCheckSums++;
                                             }
                                             else
@@ -190,6 +169,8 @@ namespace FastFileCopy
                                                 chunkRetries++;
 
                                                 abort++;
+
+                                                Thread.Sleep(100);
 
                                                 if (abort > flag5)
                                                     throw new Exception($"xxHash64 not matching after {flag5} attempts!");
@@ -210,31 +191,47 @@ namespace FastFileCopy
                 };
 
 
+                if (File.Exists(tempDest))
+                    File.Move(tempDest, dest, true);
+
+
+                File.SetCreationTime(dest, File.GetCreationTime(Source));
+                File.SetLastWriteTime(dest, File.GetLastWriteTime(Source));
+                File.SetLastAccessTime(dest, File.GetLastAccessTime(Source));
+
+
                 if (flag2 == Operation.Move)
-                    File.Delete(source);
+                    File.Delete(Source);
+
 
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"Source:{source} Dest:{dest} Size:{ReadablizeBytes(bytesRead)} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{bytesRead.ToHuman()} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                if (flag4 == Logging.Yes)
+                    Console.WriteLine($"error:  {ex.Message} | {ex.InnerException} | {ex.StackTrace}");
             }
 
         }
 
-        private static string ReadablizeBytes(int input)
-        {
-            var s = new string[] { "Bytes", "KB", "MB", "GB", "TB", "PB" };
-            var e = (int)Math.Floor(Math.Log(input) / Math.Log(1024));
-            return $"{input / Math.Pow(1024, e):00} {s[e]}";
-        }
+
 
     }
 
+}
+
+public static class ExtensionMethods
+{
+    public static string ToHuman(this int input)
+    {
+        var s = new string[] { "Bytes", "KB", "MB", "GB", "TB", "PB" };
+        var e = (int)Math.Floor(Math.Log(input) / Math.Log(1024));
+        return $"{input / Math.Pow(1024, e):00} {s[e]}";
+    }
 }
