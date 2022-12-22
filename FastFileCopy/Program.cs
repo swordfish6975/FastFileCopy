@@ -171,8 +171,6 @@ namespace FastFileCopy
 
                                                 abort++;
 
-                                                Thread.Sleep(100);
-
                                                 if (abort > flag5)
                                                     throw new Exception($"xxHash64 not matching after {flag5} attempts!");
 
@@ -180,6 +178,8 @@ namespace FastFileCopy
                                                 fswrite.Position = sourcePositon;
                                                 fsCheckRead.Position = sourcePositon;
                                                 bytesRead -= read;
+
+                                                Thread.Sleep(100);
                                             }
                                         }
 
@@ -202,7 +202,8 @@ namespace FastFileCopy
 
 
                 if (flag2 == Operation.Move)
-                    File.Delete(Source);
+                    if (File.Exists(Source))
+                        File.Delete(Source);
 
 
                 if (flag4 == Logging.Yes)
