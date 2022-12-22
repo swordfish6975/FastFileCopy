@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using ByteSizeLib;
+using System.Diagnostics;
 using xxHash3;
 
 namespace FastFileCopy
@@ -98,7 +99,7 @@ namespace FastFileCopy
         }
 
 
-        private static void Execute(string Source, string DestinationPath, Operation flag2, Logging flag4, int flag5)
+        private static void Execute(string DestinationPath, string Source, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
@@ -121,7 +122,7 @@ namespace FastFileCopy
 
                 int matchedCheckSums = 0;
                 int chunkRetries = 0;
-                int bytesRead = 0;
+                double bytesRead = 0;
 
                 using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
                 {
@@ -207,7 +208,7 @@ namespace FastFileCopy
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{bytesRead.ToHuman()} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
@@ -224,14 +225,4 @@ namespace FastFileCopy
 
     }
 
-}
-
-public static class ExtensionMethods
-{
-    public static string ToHuman(this int input)
-    {
-        var s = new string[] { "Bytes", "KB", "MB", "GB", "TB", "PB" };
-        var e = (int)Math.Floor(Math.Log(input) / Math.Log(1024));
-        return $"{input / Math.Pow(1024, e):00} {s[e]}";
-    }
 }

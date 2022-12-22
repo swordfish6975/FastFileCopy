@@ -2,7 +2,7 @@
   "profiles": {
     "FastFileCopy": {
       "commandName": "Project",
-      "commandLineArgs": "\"Z:\\data\\tmrd\\Storm_input\\Storm_events\" \"C:\\Temp\""
+      "commandLineArgs": "\"C:\\temp\" \"C:\\temp2\" 1 100 1 5"
     }
   }
 }
