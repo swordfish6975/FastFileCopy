@@ -20,7 +20,7 @@ namespace FastFileCopy
             Yes
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
 
             var SourcePath = args[0];
@@ -63,12 +63,12 @@ namespace FastFileCopy
             if (flag4 == Logging.Yes)
                 sw1.Start();
 
-            var files = Directory.GetFiles(SourcePath);
+            var files = Directory.EnumerateFiles(SourcePath);
 
             if (flag4 == Logging.Yes)
             {
                 sw1.Stop();
-                Console.WriteLine($"files {files.Length} listing files took {sw1.ElapsedMilliseconds}ms ");
+                Console.WriteLine($"files {files.Count()} listing files took {sw1.ElapsedMilliseconds}ms ");
 
             }
 
@@ -79,13 +79,13 @@ namespace FastFileCopy
                 sw2.Start();
 
 
-            Parallel.ForEach(files, new ParallelOptions()
+            await Parallel.ForEachAsync(files, new ParallelOptions()
             {
                 MaxDegreeOfParallelism = flag3
             },
-            (Source) =>
-            {
+            (Source, t) => {
                 Execute(DestinationPath, Source, flag2, flag4, flag5);
+                return new ValueTask();
             });
 
 
