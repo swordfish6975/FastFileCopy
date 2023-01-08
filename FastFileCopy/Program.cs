@@ -146,9 +146,10 @@ namespace FastFileCopy
                                             var sourcePositon = fsread.Position;
 
                                             int read = bwread.Read(dataArray, 0, array_length);
-                                            var sourceHash = xxHash64.Hash(dataArray);
                                             if (read == 0)
                                                 break;
+
+                                            var sourceHash = xxHash64.Hash(dataArray);
 
                                             bytesRead += read;
 
