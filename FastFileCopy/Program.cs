@@ -1,5 +1,6 @@
 ﻿using ByteSizeLib;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using xxHash3;
 
 namespace FastFileCopy
@@ -30,6 +31,8 @@ namespace FastFileCopy
             int flag3 = 10;
             Logging flag4 = Logging.Yes;
             int flag5 = 5;
+            string? flag6 = null;
+            bool flag7 = true;
 
             //Operation
             try { flag2 = (Operation)int.Parse(args[2]); } catch { }
@@ -43,27 +46,44 @@ namespace FastFileCopy
             //abort
             try { _ = int.TryParse(args[5], out flag5); } catch { }
 
-            if (SourcePath == null)
+            //SearchPattern
+            try { flag6 = args[6]; } catch { }
+
+            //RecurseSubdirectories
+            try { flag7 = bool.Parse(args[7]); } catch { }
+
+
+            if (string.IsNullOrEmpty(SourcePath))
             {
                 Console.WriteLine("ERROR SourcePath is null");
                 Console.ReadLine();
                 return;
             }
 
-            if (DestinationPath == null)
+            if (string.IsNullOrEmpty(DestinationPath))
             {
                 Console.WriteLine("ERROR DestinationPath is null");
                 Console.ReadLine();
                 return;
             }
 
+            if (string.IsNullOrEmpty(flag6))
+                flag6 = "*";
 
             Stopwatch sw1 = new();
 
             if (flag4 == Logging.Yes)
                 sw1.Start();
 
-            var files = Directory.EnumerateFiles(SourcePath);
+            var enumerationOptions = new EnumerationOptions()
+            {
+                RecurseSubdirectories = flag7,
+                IgnoreInaccessible = true,
+                ReturnSpecialDirectories = false,
+                MatchCasing = MatchCasing.CaseInsensitive
+            };
+
+            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions);
 
             if (flag4 == Logging.Yes)
             {
@@ -83,8 +103,9 @@ namespace FastFileCopy
             {
                 MaxDegreeOfParallelism = flag3
             },
-            (Source, t) => {
-                Execute(DestinationPath, Source, flag2, flag4, flag5);
+            (Source, t) =>
+            {
+                Execute(DestinationPath, SourcePath.Length, Source, flag2, flag4, flag5);
                 return new ValueTask();
             });
 
@@ -99,18 +120,24 @@ namespace FastFileCopy
         }
 
 
-        private static void Execute(string DestinationPath, string Source, Operation flag2, Logging flag4, int flag5)
+        private static void Execute(string DestinationPath, int SourcePathLength, string Source, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
-                var dest = Path.Combine(DestinationPath, Path.GetFileName(Source));
+
+                var dest = new List<string> { DestinationPath, Source.Remove(0, SourcePathLength) }.ForceCombine();
 
                 string? path = Path.GetDirectoryName(dest);
 
                 if (string.IsNullOrEmpty(path))
                     throw new Exception($"path == null");
 
-                var tempDest = $"{Path.Combine(path, Path.GetFileNameWithoutExtension(dest))}.temp";
+                var tempDest = $"{new List<string> { path, Path.GetFileNameWithoutExtension(dest) }.ForceCombine()}.temp";
+
+                string? targetFolder = Path.GetDirectoryName(tempDest);
+
+                if (!Directory.Exists(targetFolder) && !string.IsNullOrEmpty(targetFolder))
+                    Directory.CreateDirectory(targetFolder);
 
                 Stopwatch sw1 = new();
 
@@ -225,6 +252,15 @@ namespace FastFileCopy
 
 
 
+    }
+
+
+    public static class ExtentionMethods
+    {
+        public static string ForceCombine(this List<string> paths)
+        {
+            return paths.Aggregate((x, y) => Path.Combine(x, y.TrimStart('\\')));
+        }
     }
 
 }
