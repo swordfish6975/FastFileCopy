@@ -31,7 +31,7 @@ namespace FastFileCopy
             Logging flag4 = Logging.Yes;
             int flag5 = 5;
             string? flag6 = null;
-            bool flag7 = true;
+            int flag7 = 1;
 
             //Operation
             try { flag2 = (Operation)int.Parse(args[2]); } catch { }
@@ -49,7 +49,7 @@ namespace FastFileCopy
             try { flag6 = args[6]; } catch { }
 
             //RecurseSubdirectories
-            try { flag7 = bool.Parse(args[7]); } catch { }
+            try { _ = int.TryParse(args[7], out flag7); } catch { }
 
 
             if (string.IsNullOrEmpty(SourcePath))
@@ -76,7 +76,7 @@ namespace FastFileCopy
 
             var enumerationOptions = new EnumerationOptions()
             {
-                RecurseSubdirectories = flag7,
+                RecurseSubdirectories = (flag7 == 1),
                 IgnoreInaccessible = true,
                 ReturnSpecialDirectories = false,
                 MatchCasing = MatchCasing.CaseInsensitive
