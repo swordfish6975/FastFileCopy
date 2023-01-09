@@ -187,6 +187,14 @@ namespace FastFileCopy
                                             bwCheckread.Read(checkArray, 0, read);
                                             var destHash = xxHash64.Hash(checkArray);
 
+
+                                            //var rnd = new Random();
+                                            //var p = rnd.Next(1, 10000);
+
+                                            //if (p < 1000)
+                                            //    destHash += 1;  //code to test chunk retries
+
+
                                             if (sourceHash == destHash)
                                             {
                                                 abort = 0;
