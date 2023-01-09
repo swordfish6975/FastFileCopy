@@ -1,6 +1,5 @@
 ﻿using ByteSizeLib;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using xxHash3;
 
 namespace FastFileCopy
