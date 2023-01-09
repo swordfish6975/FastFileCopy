@@ -54,14 +54,14 @@ namespace FastFileCopy
 
             if (string.IsNullOrEmpty(SourcePath))
             {
-                Console.WriteLine("ERROR SourcePath is null");
+                Console.WriteLine("ERROR SourcePath is IsNullOrEmpty");
                 Console.ReadLine();
                 return;
             }
 
             if (string.IsNullOrEmpty(DestinationPath))
             {
-                Console.WriteLine("ERROR DestinationPath is null");
+                Console.WriteLine("ERROR DestinationPath is IsNullOrEmpty");
                 Console.ReadLine();
                 return;
             }
@@ -104,7 +104,7 @@ namespace FastFileCopy
             },
             (Source, t) =>
             {
-                Execute(DestinationPath, SourcePath.Length, Source, flag2, flag4, flag5);
+                Execute(DestinationPath, SourcePath, Source, flag2, flag4, flag5);
                 return new ValueTask();
             });
 
@@ -119,17 +119,17 @@ namespace FastFileCopy
         }
 
 
-        private static void Execute(string DestinationPath, int SourcePathLength, string Source, Operation flag2, Logging flag4, int flag5)
+        private static void Execute(string DestinationPath, string SourcePath, string Source, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
 
-                var dest = new List<string> { DestinationPath, Source.Remove(0, SourcePathLength) }.ForceCombine();
+                var dest = new List<string> { DestinationPath, Source.Replace(SourcePath, string.Empty) }.ForceCombine();
 
                 string? path = Path.GetDirectoryName(dest);
 
                 if (string.IsNullOrEmpty(path))
-                    throw new Exception($"path == null");
+                    throw new Exception($"path IsNullOrEmpty");
 
                 var tempDest = $"{new List<string> { path, Path.GetFileNameWithoutExtension(dest) }.ForceCombine()}.temp";
 
