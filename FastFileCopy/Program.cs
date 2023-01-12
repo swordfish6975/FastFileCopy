@@ -1,5 +1,6 @@
 ﻿using ByteSizeLib;
 using System.Diagnostics;
+using System.Reflection;
 using xxHash3;
 
 namespace FastFileCopy
@@ -25,7 +26,7 @@ namespace FastFileCopy
 
             if (args[0] == "?")
             {
-                Console.Write(File.ReadAllText("help.txt"));
+                Console.Write("help.txt".GetEmbeddedResource("FastFileCopy"));
                 Console.ReadKey();
                 return;
             }
@@ -269,6 +270,19 @@ namespace FastFileCopy
         public static string ForceCombine(this List<string> paths)
         {
             return paths.Aggregate((x, y) => Path.Combine(x, y.TrimStart('\\')));
+        }
+
+        public static string GetEmbeddedResource(this string filename, string ns)
+        {
+
+            using Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{ns}.{filename}");
+
+            if (stream == null)
+                throw new Exception($"stream is null {filename} not found!");
+
+            using StreamReader reader = new(stream);
+
+            return reader.ReadToEnd();
         }
 
     }
