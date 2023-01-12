@@ -1,0 +1,30 @@
+
+Required
+	Source                 string     (full path)
+	Destination            string     (full path)
+
+Optional 
+	Move/Copy              integer    Default = 1(Copy)
+	MaxDegreeOfParallelism integer    Default = 10
+	Logging                integer    Default = 1(On)
+	Abort                  integer    Default = 5
+	SearchPattern          string     Default = "*"
+	RecurseSubdirectories  integer    Default = 1(On)
+
+
+E.g., Copy everything from temp1 to temp2 using 10 threads including subdirectories and store console output to log.txt
+
+	 "C:\temp1" "C:\temp2" > log.txt
+
+E.g., Move every .xml file from temp1 to temp2 using 500 threads including subdirectories and store console output to log.txt
+
+	 "C:\temp1" "C:\temp2" 0 500 1 5 "*.xml" 1 > log.txt
+
+E.g., Move every .xml file from temp2 to temp1 using 200 threads top directory only and don't log at all
+
+	 "C:\temp2" "C:\temp1" 0 200 0 5 "*.xml" 0
+
+
+Note: Abort is how many checksum mismatches are allowed of an up to 0.25MB piece of a file before giving up on that file (with a 100ms delay).
+
+Press any key to exit...

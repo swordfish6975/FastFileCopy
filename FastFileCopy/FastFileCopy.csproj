@@ -12,4 +12,10 @@
     <PackageReference Include="xxHash3-LeagueToolkit" Version="1.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="help.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

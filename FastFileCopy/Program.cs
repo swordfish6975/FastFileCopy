@@ -23,6 +23,14 @@ namespace FastFileCopy
         static async Task Main(string[] args)
         {
 
+            if (args[0] == "?")
+            {
+                Console.Write(File.ReadAllText("help.txt"));
+                Console.ReadKey();
+                return;
+            }
+
+
             var SourcePath = args[0];
             var DestinationPath = args[1];
 
