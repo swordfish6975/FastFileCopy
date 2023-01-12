@@ -104,8 +104,8 @@ namespace FastFileCopy
             },
             async (Source, t) =>
             {
-                if (flag4 == Logging.Yes)
-                    Console.WriteLine($"START Source:{Source} SourcePath:{SourcePath} DestinationPath: {DestinationPath}");
+                //if (flag4 == Logging.Yes)
+                //    Console.WriteLine($"START Source:{Source} SourcePath:{SourcePath} DestinationPath: {DestinationPath}");
 
                 await Execute(Source, SourcePath, DestinationPath, flag2, flag4, flag5);
             });
@@ -133,9 +133,9 @@ namespace FastFileCopy
                 if (string.IsNullOrEmpty(path))
                     throw new Exception($"path IsNullOrEmpty");
 
-                var tempDest = $"{new List<string> { path, Path.GetFileName(dest) }.ForceCombine()}.tmp";
+                var tmpDest = $"{new List<string> { path, Path.GetFileName(dest) }.ForceCombine()}.tmp";
 
-                string? targetFolder = Path.GetDirectoryName(tempDest);
+                string? targetFolder = Path.GetDirectoryName(tmpDest);
 
                 if (!Directory.Exists(targetFolder) && !string.IsNullOrEmpty(targetFolder))
                     Directory.CreateDirectory(targetFolder);
@@ -156,9 +156,9 @@ namespace FastFileCopy
 
                 using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length, FileOptions.Asynchronous))
                 {
-                    using (FileStream fswrite = new(tempDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length, FileOptions.Asynchronous))
+                    using (FileStream fswrite = new(tmpDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length, FileOptions.Asynchronous))
                     {
-                        using (FileStream fsCheckRead = new(tempDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length, FileOptions.Asynchronous))
+                        using (FileStream fsCheckRead = new(tmpDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length, FileOptions.Asynchronous))
                         {
 
                             var dataArray = new byte[array_length];
@@ -223,8 +223,8 @@ namespace FastFileCopy
                 };
 
 
-                if (File.Exists(tempDest))
-                    File.Move(tempDest, dest, true);
+                if (File.Exists(tmpDest))
+                    File.Move(tmpDest, dest, true);
 
                 File.SetCreationTime(dest, File.GetCreationTime(Source));
                 File.SetLastWriteTime(dest, File.GetLastWriteTime(Source));
@@ -239,7 +239,7 @@ namespace FastFileCopy
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"END Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
