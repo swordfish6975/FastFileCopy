@@ -1,3 +1,4 @@
+Welcome to FastFileCopy Help
 
 Required
 	Source                 string     (full path)

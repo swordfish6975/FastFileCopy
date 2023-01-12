@@ -21,8 +21,11 @@ namespace FastFileCopy
             Yes
         }
 
+        private static bool is64bit;
+
         static async Task Main(string[] args)
         {
+            is64bit = Environment.Is64BitOperatingSystem;
 
             if (args[0] == "?")
             {
@@ -85,7 +88,7 @@ namespace FastFileCopy
 
             var enumerationOptions = new EnumerationOptions()
             {
-                RecurseSubdirectories = (flag7 == 1),
+                RecurseSubdirectories = Convert.ToBoolean(flag7),
                 IgnoreInaccessible = true,
                 ReturnSpecialDirectories = false,
                 MatchCasing = MatchCasing.CaseInsensitive
@@ -123,7 +126,7 @@ namespace FastFileCopy
             if (flag4 == Logging.Yes)
             {
                 sw2.Stop();
-                Console.WriteLine($"copy/move took {sw2.ElapsedMilliseconds}ms ");
+                Console.WriteLine($"{(Convert.ToBoolean((int)flag2) ? "Copy" : "Move")} took {sw2.ElapsedMilliseconds}ms ");
             }
 
 
@@ -181,7 +184,7 @@ namespace FastFileCopy
                                 if (read == 0)
                                     break;
 
-                                var sourceHash = xxHash64.Hash(dataArray);
+                                var sourceHash = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
 
                                 bytesRead += read;
 
@@ -192,7 +195,7 @@ namespace FastFileCopy
 
                                 _ = await fsCheckRead.ReadAsync(checkArray.AsMemory(0, read));
 
-                                var destHash = xxHash64.Hash(checkArray);
+                                var destHash = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
 
 
                                 //var rnd = new Random();
@@ -214,7 +217,7 @@ namespace FastFileCopy
                                     abort++;
 
                                     if (abort > flag5)
-                                        throw new Exception($"xxHash64 not matching after {flag5} attempts!");
+                                        throw new Exception($"xxHash not matching after {flag5} attempts!");
 
                                     fsread.Position = sourcePositon;
                                     fswrite.Position = sourcePositon;
