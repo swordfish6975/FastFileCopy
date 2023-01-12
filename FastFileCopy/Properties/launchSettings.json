@@ -2,7 +2,7 @@
   "profiles": {
     "FastFileCopy": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\temp\" \"C:\\temp2\" 1 100 1 5"
+      "commandLineArgs": "\"C:\\temp1\" \"C:\\temp2\" 1 100 1 5"
     }
   }
 }

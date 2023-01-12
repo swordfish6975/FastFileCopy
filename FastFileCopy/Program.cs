@@ -102,10 +102,12 @@ namespace FastFileCopy
             {
                 MaxDegreeOfParallelism = flag3
             },
-            (Source, t) =>
+            async (Source, t) =>
             {
-                Execute(DestinationPath, SourcePath, Source, flag2, flag4, flag5);
-                return new ValueTask();
+                if (flag4 == Logging.Yes)
+                    Console.WriteLine($"START Source:{Source} SourcePath:{SourcePath} DestinationPath: {DestinationPath}");
+
+                await Execute(Source, SourcePath, DestinationPath, flag2, flag4, flag5);
             });
 
 
@@ -119,7 +121,7 @@ namespace FastFileCopy
         }
 
 
-        private static void Execute(string DestinationPath, string SourcePath, string Source, Operation flag2, Logging flag4, int flag5)
+        private static async Task Execute(string Source, string SourcePath, string DestinationPath, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
@@ -131,7 +133,7 @@ namespace FastFileCopy
                 if (string.IsNullOrEmpty(path))
                     throw new Exception($"path IsNullOrEmpty");
 
-                var tempDest = $"{new List<string> { path, Path.GetFileNameWithoutExtension(dest) }.ForceCombine()}.temp";
+                var tempDest = $"{new List<string> { path, Path.GetFileName(dest) }.ForceCombine()}.tmp";
 
                 string? targetFolder = Path.GetDirectoryName(tempDest);
 
@@ -144,92 +146,85 @@ namespace FastFileCopy
                     sw1.Start();
 
 
-                var array_length = (int)Math.Pow(2, 19);  //0.5mb
+                var array_length = 262144; //0.25mb
 
                 int matchedCheckSums = 0;
                 int chunkRetries = 0;
                 double bytesRead = 0;
 
-                using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
+                int abort = 0;
+
+                using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length, FileOptions.Asynchronous))
                 {
-                    using (BinaryReader bwread = new(fsread))
+                    using (FileStream fswrite = new(tempDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length, FileOptions.Asynchronous))
                     {
-                        using (FileStream fswrite = new(tempDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length))
+                        using (FileStream fsCheckRead = new(tempDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length, FileOptions.Asynchronous))
                         {
-                            using (BinaryWriter bwwrite = new(fswrite))
+
+                            var dataArray = new byte[array_length];
+                            var checkArray = new byte[array_length];
+
+                            for (; ; )
                             {
-                                using (FileStream fsCheckRead = new(tempDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length))
+                                var sourcePositon = fsread.Position;
+
+                                int read = await fsread.ReadAsync(dataArray.AsMemory(0, array_length));
+                                if (read == 0)
+                                    break;
+
+                                var sourceHash = xxHash64.Hash(dataArray);
+
+                                bytesRead += read;
+
+                                await fswrite.WriteAsync(dataArray.AsMemory(0, read));
+
+                                //have to write to disk so that we can read and check the results
+                                await fswrite.FlushAsync();
+
+                                _ = await fsCheckRead.ReadAsync(checkArray.AsMemory(0, read));
+
+                                var destHash = xxHash64.Hash(checkArray);
+
+
+                                //var rnd = new Random();
+                                //var p = rnd.Next(1, 10000);
+
+                                //if (p < 1000)
+                                //    destHash += 1;  //code to test chunk retries
+
+
+                                if (sourceHash == destHash)
                                 {
-                                    using (BinaryReader bwCheckread = new(fsCheckRead))
-                                    {
-                                        var dataArray = new byte[array_length];
-                                        var checkArray = new byte[array_length];
+                                    abort = 0;
+                                    matchedCheckSums++;
+                                }
+                                else
+                                {
+                                    chunkRetries++;
 
-                                        int abort = 0;
+                                    abort++;
 
-                                        for (; ; )
-                                        {
-                                            var sourcePositon = fsread.Position;
+                                    if (abort > flag5)
+                                        throw new Exception($"xxHash64 not matching after {flag5} attempts!");
 
-                                            int read = bwread.Read(dataArray, 0, array_length);
-                                            if (read == 0)
-                                                break;
+                                    fsread.Position = sourcePositon;
+                                    fswrite.Position = sourcePositon;
+                                    fsCheckRead.Position = sourcePositon;
+                                    bytesRead -= read;
 
-                                            var sourceHash = xxHash64.Hash(dataArray);
+                                    Thread.Sleep(100);
+                                }
+                            }
 
-                                            bytesRead += read;
-
-                                            bwwrite.Write(dataArray, 0, read);
-
-                                            //have to write to disk so that we can read and check the results
-                                            bwwrite.Flush();
-
-                                            bwCheckread.Read(checkArray, 0, read);
-                                            var destHash = xxHash64.Hash(checkArray);
-
-
-                                            //var rnd = new Random();
-                                            //var p = rnd.Next(1, 10000);
-
-                                            //if (p < 1000)
-                                            //    destHash += 1;  //code to test chunk retries
-
-
-                                            if (sourceHash == destHash)
-                                            {
-                                                abort = 0;
-                                                matchedCheckSums++;
-                                            }
-                                            else
-                                            {
-                                                chunkRetries++;
-
-                                                abort++;
-
-                                                if (abort > flag5)
-                                                    throw new Exception($"xxHash64 not matching after {flag5} attempts!");
-
-                                                fsread.Position = sourcePositon;
-                                                fswrite.Position = sourcePositon;
-                                                fsCheckRead.Position = sourcePositon;
-                                                bytesRead -= read;
-
-                                                Thread.Sleep(100);
-                                            }
-                                        }
-
-                                    };
-                                };
-
-                            };
                         };
+
                     };
+
                 };
 
 
                 if (File.Exists(tempDest))
                     File.Move(tempDest, dest, true);
-
 
                 File.SetCreationTime(dest, File.GetCreationTime(Source));
                 File.SetLastWriteTime(dest, File.GetLastWriteTime(Source));
@@ -244,7 +239,7 @@ namespace FastFileCopy
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"END Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
@@ -258,7 +253,6 @@ namespace FastFileCopy
         }
 
 
-
     }
 
 
@@ -268,6 +262,7 @@ namespace FastFileCopy
         {
             return paths.Aggregate((x, y) => Path.Combine(x, y.TrimStart('\\')));
         }
+
     }
 
 }
