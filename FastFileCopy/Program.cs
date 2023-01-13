@@ -91,6 +91,7 @@ namespace FastFileCopy
                 RecurseSubdirectories = Convert.ToBoolean(flag7),
                 IgnoreInaccessible = true,
                 ReturnSpecialDirectories = false,
+                AttributesToSkip = default,
                 MatchCasing = MatchCasing.CaseInsensitive
             };
 
@@ -184,7 +185,7 @@ namespace FastFileCopy
                                 if (read == 0)
                                     break;
 
-                                var sourceHash = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
+                                var sourceHash = is64bit ? xxHash64.Hash(dataArray) : xxHash32.Hash(dataArray);
 
                                 bytesRead += read;
 
@@ -197,12 +198,12 @@ namespace FastFileCopy
 
                                 var destHash = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
 
-
+                                ////code to test chunk retries
                                 //var rnd = new Random();
                                 //var p = rnd.Next(1, 10000);
 
                                 //if (p < 1000)
-                                //    destHash += 1;  //code to test chunk retries
+                                //    destHash += 1;
 
 
                                 if (sourceHash == destHash)
