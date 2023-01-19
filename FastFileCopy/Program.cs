@@ -1,4 +1,5 @@
 ﻿using ByteSizeLib;
+using ListShuffle;
 using System.Diagnostics;
 using System.Reflection;
 using xxHash3;
@@ -8,6 +9,7 @@ namespace FastFileCopy
     internal class Program
     {
         //dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
+        //dotnet publish -c Release -r win-x86 -p:PublishSingleFile=true --self-contained true
 
         enum Operation
         {
@@ -95,7 +97,9 @@ namespace FastFileCopy
                 MatchCasing = MatchCasing.CaseInsensitive
             };
 
-            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions);
+            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions).ToList();
+
+            files.Shuffle();
 
             if (flag4 == Logging.Yes)
             {
