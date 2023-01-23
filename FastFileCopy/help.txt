@@ -11,6 +11,7 @@ Optional
 	Abort                  integer    Default = 5
 	SearchPattern          string     Default = "*"
 	RecurseSubdirectories  integer    Default = 1(On)
+	MaxGrab                integer    Default = AllFiles
 
 
 E.g., Copy everything from temp1 to temp2 using 10 threads including subdirectories and store console output to log.txt

@@ -46,6 +46,7 @@ namespace FastFileCopy
             int flag5 = 5;
             string? flag6 = null;
             int flag7 = 1;
+            int flag8 = -1;
 
             //Operation
             try { flag2 = (Operation)int.Parse(args[2]); } catch { }
@@ -64,6 +65,9 @@ namespace FastFileCopy
 
             //RecurseSubdirectories
             try { _ = int.TryParse(args[7], out flag7); } catch { }
+
+            //MaxGrab
+            try { _ = int.TryParse(args[8], out flag8); } catch { }
 
 
             if (string.IsNullOrEmpty(SourcePath))
@@ -97,14 +101,16 @@ namespace FastFileCopy
                 MatchCasing = MatchCasing.CaseInsensitive
             };
 
-            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions).ToList();
+            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions);
 
-            files.Shuffle();
+            var lFiles = (flag8 > 0) ? files.Take(flag8).ToList() : files.ToList();
+
+            lFiles.Shuffle();
 
             if (flag4 == Logging.Yes)
             {
                 sw1.Stop();
-                Console.WriteLine($"files {files.Count()} listing files took {sw1.ElapsedMilliseconds}ms ");
+                Console.WriteLine($"files {lFiles.Count()} listing files took {sw1.ElapsedMilliseconds}ms ");
 
             }
 
@@ -115,7 +121,7 @@ namespace FastFileCopy
                 sw2.Start();
 
 
-            await Parallel.ForEachAsync(files, new ParallelOptions()
+            await Parallel.ForEachAsync(lFiles, new ParallelOptions()
             {
                 MaxDegreeOfParallelism = flag3
             },
