@@ -37,8 +37,8 @@ namespace FastFileCopy
             }
 
 
-            var SourcePath = args[0];
-            var DestinationPath = args[1];
+            var sourceDirectory = args[0];
+            var destinationDirectory = args[1];
 
             Operation flag2 = Operation.Copy;
             int flag3 = 10;
@@ -70,16 +70,16 @@ namespace FastFileCopy
             try { _ = int.TryParse(args[8], out flag8); } catch { }
 
 
-            if (string.IsNullOrEmpty(SourcePath))
+            if (string.IsNullOrEmpty(sourceDirectory))
             {
-                Console.WriteLine("ERROR SourcePath is IsNullOrEmpty");
+                Console.WriteLine("ERROR sourceDirectory is IsNullOrEmpty");
                 Console.ReadLine();
                 return;
             }
 
-            if (string.IsNullOrEmpty(DestinationPath))
+            if (string.IsNullOrEmpty(destinationDirectory))
             {
-                Console.WriteLine("ERROR DestinationPath is IsNullOrEmpty");
+                Console.WriteLine("ERROR destinationDirectory is IsNullOrEmpty");
                 Console.ReadLine();
                 return;
             }
@@ -101,7 +101,7 @@ namespace FastFileCopy
                 MatchCasing = MatchCasing.CaseInsensitive
             };
 
-            var files = Directory.EnumerateFiles(SourcePath, flag6, enumerationOptions);
+            var files = Directory.EnumerateFiles(sourceDirectory, flag6, enumerationOptions);
 
             var lFiles = (flag8 > 0) ? files.Take(flag8).ToList() : files.ToList();
 
@@ -125,12 +125,12 @@ namespace FastFileCopy
             {
                 MaxDegreeOfParallelism = flag3
             },
-            async (Source, t) =>
+            async (file, t) =>
             {
                 //if (flag4 == Logging.Yes)
                 //    Console.WriteLine($"START Source:{Source} SourcePath:{SourcePath} DestinationPath: {DestinationPath}");
 
-                await Execute(Source, SourcePath, DestinationPath, flag2, flag4, flag5);
+                await Execute(file, sourceDirectory, destinationDirectory, flag2, flag4, flag5);
             });
 
 
@@ -144,24 +144,21 @@ namespace FastFileCopy
         }
 
 
-        private static async Task Execute(string Source, string SourcePath, string DestinationPath, Operation flag2, Logging flag4, int flag5)
+        private static async Task Execute(string file, string sourceDirectory, string destinationDirectory, Operation flag2, Logging flag4, int flag5)
         {
             try
             {
+                var relativePath = file.Substring(sourceDirectory.Length + 1);
+                var destinationFile = new List<string> { destinationDirectory, relativePath }.ForceCombine();
+                var tmpDestinationFile = $"{destinationFile}.tmp";
 
-                var dest = new List<string> { DestinationPath, Source.Replace(SourcePath, string.Empty) }.ForceCombine();
+                string? destinationFolder = Path.GetDirectoryName(destinationFile);
 
-                string? path = Path.GetDirectoryName(dest);
+                if (string.IsNullOrEmpty(destinationFolder))
+                    throw new Exception($"destinationFolder IsNullOrEmpty");
 
-                if (string.IsNullOrEmpty(path))
-                    throw new Exception($"path IsNullOrEmpty");
-
-                var tmpDest = $"{new List<string> { path, Path.GetFileName(dest) }.ForceCombine()}.tmp";
-
-                string? targetFolder = Path.GetDirectoryName(tmpDest);
-
-                if (!Directory.Exists(targetFolder) && !string.IsNullOrEmpty(targetFolder))
-                    Directory.CreateDirectory(targetFolder);
+                if (!Directory.Exists(destinationFolder) && !string.IsNullOrEmpty(destinationFolder))
+                    Directory.CreateDirectory(destinationFolder);
 
                 Stopwatch sw1 = new();
 
@@ -177,11 +174,11 @@ namespace FastFileCopy
 
                 int abort = 0;
 
-                using (FileStream fsread = new(Source, FileMode.Open, FileAccess.Read, FileShare.None, array_length, FileOptions.Asynchronous))
+                using (FileStream fsread = new(file, FileMode.Open, FileAccess.Read, FileShare.None, array_length, FileOptions.Asynchronous))
                 {
-                    using (FileStream fswrite = new(tmpDest, FileMode.Create, FileAccess.Write, FileShare.Read, array_length, FileOptions.Asynchronous))
+                    using (FileStream fswrite = new(tmpDestinationFile, FileMode.Create, FileAccess.Write, FileShare.Read, array_length, FileOptions.Asynchronous))
                     {
-                        using (FileStream fsCheckRead = new(tmpDest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length, FileOptions.Asynchronous))
+                        using (FileStream fsCheckRead = new(tmpDestinationFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, array_length, FileOptions.Asynchronous))
                         {
 
                             var dataArray = new byte[array_length];
@@ -195,7 +192,7 @@ namespace FastFileCopy
                                 if (read == 0)
                                     break;
 
-                                var sourceHash = is64bit ? xxHash64.Hash(dataArray) : xxHash32.Hash(dataArray);
+                                var sourceChecksum = is64bit ? xxHash64.Hash(dataArray) : xxHash32.Hash(dataArray);
 
                                 bytesRead += read;
 
@@ -204,9 +201,9 @@ namespace FastFileCopy
                                 //have to write to disk so that we can read and check the results
                                 await fswrite.FlushAsync();
 
-                                _ = await fsCheckRead.ReadAsync(checkArray.AsMemory(0, read));
+                                await fsCheckRead.ReadAsync(checkArray.AsMemory(0, read));
 
-                                var destHash = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
+                                var destinationChecksum = is64bit ? xxHash64.Hash(checkArray) : xxHash32.Hash(checkArray);
 
                                 ////code to test chunk retries
                                 //var rnd = new Random();
@@ -216,7 +213,7 @@ namespace FastFileCopy
                                 //    destHash += 1;
 
 
-                                if (sourceHash == destHash)
+                                if (sourceChecksum == destinationChecksum)
                                 {
                                     abort = 0;
                                     matchedCheckSums++;
@@ -246,23 +243,23 @@ namespace FastFileCopy
                 };
 
 
-                if (File.Exists(tmpDest))
-                    File.Move(tmpDest, dest, true);
+                if (File.Exists(tmpDestinationFile))
+                    File.Move(tmpDestinationFile, destinationFile, true);
 
-                File.SetCreationTime(dest, File.GetCreationTime(Source));
-                File.SetLastWriteTime(dest, File.GetLastWriteTime(Source));
-                File.SetLastAccessTime(dest, File.GetLastAccessTime(Source));
+                File.SetCreationTime(destinationFile, File.GetCreationTime(file));
+                File.SetLastWriteTime(destinationFile, File.GetLastWriteTime(file));
+                File.SetLastAccessTime(destinationFile, File.GetLastAccessTime(file));
 
 
                 if (flag2 == Operation.Move)
-                    if (File.Exists(Source))
-                        File.Delete(Source);
+                    if (File.Exists(file))
+                        File.Delete(file);
 
 
                 if (flag4 == Logging.Yes)
                 {
                     sw1.Stop();
-                    Console.WriteLine($"Source:{Source} Dest:{dest} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
+                    Console.WriteLine($"Source:{file} Dest:{destinationFile} Size:{ByteSize.FromBytes(bytesRead):0.00} Matched Checksum:{matchedCheckSums} Chunk Retries:{chunkRetries} Time:{sw1.ElapsedMilliseconds}ms");
                 }
 
 
