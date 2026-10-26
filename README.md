@@ -15,7 +15,8 @@ FastFileCopy <source> <destination> [options]
   -r, --retries <retries>      Checksum mismatches allowed per chunk before giving up on a file (100ms delay between attempts) [default: 5]
   --no-verify                  Skip checksum verification of written chunks (fastest)
   --no-timestamps              Don't copy creation, last write and last access times to the destination
-  -b, --buffer <buffer>        Chunk size in KB used for reading, writing and verification [default: 1024]
+  -d, --durable                Flush each file to disk and verify it by reading it back from disk, bypassing the OS cache (always on for --move to another volume)
+  -b, --buffer <buffer>        Chunk size in KB used for reading, writing and verification [default: 1024, max: 65536]
   -q, --quiet                  Don't log anything except the final summary
   -?, -h, --help               Show help and usage information
   --version                    Show version information
@@ -29,6 +30,14 @@ FastFileCopy "C:\temp1" "C:\temp2" --move --threads 500 --pattern "*.xml" > log.
 FastFileCopy "C:\temp2" "C:\temp1" --move -t 200 -p "*.xml" --no-recurse --quiet
 FastFileCopy "C:\temp1" "D:\backup" --no-timestamps
 ```
+
+## Verification
+
+By default every chunk is read back and compared with xxHash3, retrying the chunk on a mismatch. That read back is served from the Windows file cache, so it proves the data Windows accepted is correct, not that it has reached the disk.
+
+`--durable` adds a second stage per file: the file is flushed to disk with `FlushFileBuffers`, then read back with `FILE_FLAG_NO_BUFFERING` (straight from the disk, not the cache) and its whole-file xxHash3 compared with the source. On a mismatch the whole file is written again, up to `--retries` times. Only then is the `.tmp` file renamed into place. It is slower, but a copy that finished is on the disk.
+
+`--move` to another volume always runs durable, because the source file is deleted afterwards. A move within the same volume is a rename and copies no data.
 
 The exit code is `0` when every file succeeded and `1` if any file failed, the arguments were invalid or the run was cancelled with Ctrl+C.
 
